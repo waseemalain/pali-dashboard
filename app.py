@@ -15,7 +15,6 @@ app.layout = html.Div([
     html.Div([
         dcc.Input(id="business_name", placeholder="Business Name", style={"marginRight": "10px"}),
         dcc.Input(id="address", placeholder="Business Address", style={"marginRight": "10px"}),
-        dcc.Input(id="category", placeholder="Category (e.g. pizza)", style={"marginRight": "10px"}),
         html.Button("Run Analysis", id="run_button", n_clicks=0)
     ], style={"marginBottom": "20px"}),
 
@@ -45,17 +44,15 @@ app.layout = html.Div([
     Input("run_button", "n_clicks"),
     State("business_name", "value"),
     State("address", "value"),
-    State("category", "value"),
 )
-def update_dashboard(n_clicks, business_name, address, category):
+def update_dashboard(n_clicks, business_name, address):
 
     if n_clicks == 0:
         return "", [], [], [], [], [], []
 
     params = {
         "business_name": business_name,
-        "address": address,
-        "category": category
+        "address": address
     }
 
     response = requests.get(API_URL, params=params).json()
