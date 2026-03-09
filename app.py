@@ -34,7 +34,7 @@ app.layout = html.Div([
     html.Div([
         dcc.Input(id="business_name", placeholder="Business Name"),
         dcc.Input(id="address", placeholder="Business Address"),
-        html.Button("Run Analysis", id="run_button")
+        html.Button("Run Analysis", id="run_button", n_clicks=0)
     ], style={"marginBottom": "30px"}),
 
     html.Div(id="market_cards", style={"display": "flex", "gap": "20px", "marginBottom": "30px"}),
@@ -76,6 +76,10 @@ def update_dashboard(n_clicks, business_name, address):
     if not n_clicks:
         return [], [], {}, [], [], [], [], [], []
 
+    if not business_name or not address:
+        return [], [], {}, [], [], [], [], [], []
+
+    
     try:
 
         params = {
@@ -84,6 +88,7 @@ def update_dashboard(n_clicks, business_name, address):
         }
 
         response = requests.get(API_URL, params=params, timeout=30).json()
+        print("API response:", response)
 
         df1 = pd.DataFrame(response.get("radius_1_mile", []))
         df3 = pd.DataFrame(response.get("radius_3_mile", []))
@@ -132,8 +137,7 @@ def update_dashboard(n_clicks, business_name, address):
             )
 
         else:
-
-            fig = {}
+            fig = px.scatter(title="No competitor data available")
 
         # TABLE BUILDER
 
