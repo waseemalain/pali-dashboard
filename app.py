@@ -90,7 +90,6 @@ def update_dashboard(n_clicks, business_name, address):
         df5 = pd.DataFrame(response.get("radius_5_mile", []))
 
         market = response.get("market_data", {})
-        summary = response.get("summary", {})
 
         # MARKET CARDS
 
@@ -103,21 +102,25 @@ def update_dashboard(n_clicks, business_name, address):
         ]
 
         # COMPETITOR CARDS
-
         competitor_cards = [
 
-            metric_card("Competitors (1 Mile)", summary.get("competitors_1_mile", "-")),
-            metric_card("Competitors (3 Mile)", summary.get("competitors_3_mile", "-")),
-            metric_card("Competitors (5 Mile)", summary.get("competitors_5_mile", "-")),
-            metric_card("Client Rating", summary.get("client_rating", "-")),
-            metric_card("Client Reviews", summary.get("client_reviews", "-")),
+            metric_card("Competitors (1 Mile)", len(df1)),
+            metric_card("Competitors (3 Mile)", len(df3)),
+            metric_card("Competitors (5 Mile)", len(df5)),
+            metric_card("Client Rating", response["client"]["rating"]),
+            metric_card("Client Reviews", response["client"]["reviews"]),
 
         ]
+        
 
         # BUILD CHART
 
-        combined = pd.concat([df1, df3, df5], ignore_index=True)
+        frames = [df for df in [df1, df3, df5] if not df.empty]
 
+        if frames:
+            combined = pd.concat(frames, ignore_index=True)
+        else:
+            combined = pd.DataFrame()
         if not combined.empty:
 
             fig = px.scatter(
