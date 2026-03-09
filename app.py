@@ -34,8 +34,8 @@ app.layout = html.Div(
 
         html.Div(
             [
-                dcc.Input(id="business_name", placeholder="Business Name"),
-                dcc.Input(id="address", placeholder="Business Address"),
+                dcc.Input(id="business_name", placeholder="Business Name", debounce=True),
+                dcc.Input(id="address", placeholder="Business Address", debounce=True),
                 html.Button("Run Analysis", id="run_button", n_clicks=0),
             ],
             style={"marginBottom": "30px"},
