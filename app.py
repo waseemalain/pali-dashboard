@@ -3,37 +3,75 @@ from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 import requests
 import pandas as pd
+import plotly.express as px
 
 API_URL = "https://pali-analytics-api-1.onrender.com/competitors"
 
 app = dash.Dash(__name__)
 server = app.server
 
+
+def metric_card(title, value):
+
+    return html.Div([
+        html.Div(title, style={"fontSize": "14px", "color": "#888"}),
+        html.Div(value, style={"fontSize": "28px", "fontWeight": "bold"})
+    ],
+    style={
+        "border": "1px solid #eee",
+        "padding": "20px",
+        "borderRadius": "10px",
+        "width": "200px",
+        "textAlign": "center",
+        "boxShadow": "0px 2px 6px rgba(0,0,0,0.05)"
+    })
+
+
 app.layout = html.Div([
-    html.H1("Pali Analytics – Competitor Dashboard"),
+
+    html.H1("Pali Analytics – Market Intelligence"),
 
     html.Div([
         dcc.Input(id="business_name", placeholder="Business Name", style={"marginRight": "10px"}),
         dcc.Input(id="address", placeholder="Business Address", style={"marginRight": "10px"}),
-        html.Button("Run Analysis", id="run_button", n_clicks=0)
-    ], style={"marginBottom": "20px"}),
+        html.Button("Run Analysis", id="run_button")
+    ], style={"marginBottom": "30px"}),
 
-    html.Div(id="summary_output"),
+    html.Div(id="market_cards", style={"display": "flex", "gap": "20px", "marginBottom": "30px"}),
+
+    html.Div(id="competitor_cards", style={"display": "flex", "gap": "20px", "marginBottom": "40px"}),
+
+    dcc.Graph(id="competitor_chart"),
 
     html.H3("1 Mile Competitors"),
-    dash_table.DataTable(id="table_1"),
+    dash_table.DataTable(
+        id="table_1",
+        style_table={"overflowX": "auto"},
+        style_cell={"textAlign": "left"}
+    ),
 
     html.H3("3 Mile Competitors"),
-    dash_table.DataTable(id="table_3"),
+    dash_table.DataTable(
+        id="table_3",
+        style_table={"overflowX": "auto"},
+        style_cell={"textAlign": "left"}
+    ),
 
     html.H3("5 Mile Competitors"),
-    dash_table.DataTable(id="table_5"),
+    dash_table.DataTable(
+        id="table_5",
+        style_table={"overflowX": "auto"},
+        style_cell={"textAlign": "left"}
+    ),
+
 ])
 
 
 @app.callback(
     [
-        Output("summary_output", "children"),
+        Output("market_cards", "children"),
+        Output("competitor_cards", "children"),
+        Output("competitor_chart", "figure"),
         Output("table_1", "data"),
         Output("table_1", "columns"),
         Output("table_3", "data"),
@@ -47,8 +85,8 @@ app.layout = html.Div([
 )
 def update_dashboard(n_clicks, business_name, address):
 
-    if n_clicks == 0:
-        return "", [], [], [], [], [], []
+    if not n_clicks:
+        return [], [], {}, [], [], [], [], [], []
 
     params = {
         "business_name": business_name,
@@ -61,23 +99,79 @@ def update_dashboard(n_clicks, business_name, address):
     df3 = pd.DataFrame(response.get("radius_3_mile", []))
     df5 = pd.DataFrame(response.get("radius_5_mile", []))
 
-    summary = html.Div([
-        html.H2("Competitive Summary"),
-        html.P(f"1 Mile Competitors: {len(df1)}"),
-        html.P(f"3 Mile Competitors: {len(df3)}"),
-        html.P(f"5 Mile Competitors: {len(df5)}"),
-    ])
+    market = response.get("market_data", {})
+    summary = response.get("summary", {})
+
+    # ---------------- MARKET CARDS ----------------
+
+    market_cards = [
+
+        metric_card(
+            "Population",
+            f"{market.get('population',0):,}" if market.get("population") else "-"
+        ),
+
+        metric_card(
+            "Median Income",
+            f"${market.get('median_income',0):,}" if market.get("median_income") else "-"
+        ),
+
+        metric_card(
+            "Median Age",
+            market.get("median_age", "-")
+        ),
+    ]
+
+    # ---------------- COMPETITOR CARDS ----------------
+
+    competitor_cards = [
+
+        metric_card("Competitors (1 Mile)", summary.get("competitors_1_mile")),
+        metric_card("Competitors (3 Mile)", summary.get("competitors_3_mile")),
+        metric_card("Competitors (5 Mile)", summary.get("competitors_5_mile")),
+        metric_card("Client Rating", summary.get("client_rating")),
+        metric_card("Client Reviews", summary.get("client_reviews")),
+    ]
+
+    # ---------------- CHART ----------------
+
+    combined = pd.concat([df1, df3, df5])
+
+    if not combined.empty:
+
+        fig = px.scatter(
+            combined,
+            x="reviews",
+            y="rating",
+            hover_name="name",
+            title="Competitor Rating vs Review Volume"
+        )
+
+    else:
+
+        fig = {}
+
+    # ---------------- TABLE BUILDER ----------------
 
     def build_table(df):
+
         if df.empty:
             return [], []
+
         return df.to_dict("records"), [{"name": i, "id": i} for i in df.columns]
 
     data1, cols1 = build_table(df1)
     data3, cols3 = build_table(df3)
     data5, cols5 = build_table(df5)
 
-    return summary, data1, cols1, data3, cols3, data5, cols5
+    return (
+        market_cards,
+        competitor_cards,
+        fig,
+        data1, cols1,
+        data3, cols3,
+        data5, cols5
+    )
 
 
 if __name__ == "__main__":
